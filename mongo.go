@@ -42,7 +42,14 @@ func (*Mongo) NewClient(connURI string) interface{} {
 func (c *Client) Insert(database string, collection string, doc interface{}) error {
 	db := c.client.Database(database)
 	col := db.Collection(collection)
-	_, err := col.InsertOne(context.TODO(), doc)
+
+	parsedDocBytes, err := bson.MarshalExtJSON(doc, false, false)
+	var parsedDoc interface{}
+	err = bson.UnmarshalExtJSON(parsedDocBytes, false, &parsedDoc)
+	if err != nil {
+		return err
+	}
+	_, err = col.InsertOne(context.TODO(), parsedDoc)
 	if err != nil {
 		return err
 	}
@@ -61,34 +68,33 @@ func (c *Client) InsertBatch(database string, collection string, docs []any) err
 
 }
 
-func (c *Client) Find(database string, collection string, filter interface{}) []bson.M {
+func (c *Client) Find(database string, collection string, filter interface{}, limit int64) ([]bson.M, error) {
+	var results []bson.M
+
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 
-	log.Print("filter is ", filter)
-	cur, err := col.Find(context.TODO(), filter)
+	opts := options.Find().SetLimit(limit)
+	cur, err := col.Find(context.TODO(), filter, opts)
 	if err != nil {
 		log.Fatal(err)
-		// return nil
+		return results, err
 	}
 
-	var results []bson.M
 	if err = cur.All(context.TODO(), &results); err != nil {
 		panic(err)
 	}
-	return results
+	return results, err
 }
 
-func (c *Client) FindOne(database string, collection string, filter map[string]string) error {
+func (c *Client) FindOne(database string, collection string, filter map[string]string) (bson.M, error) {
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 	var result bson.M
 	opts := options.FindOne().SetSort(bson.D{{"_id", 1}})
-	log.Print("filter is ", filter)
 	err := col.FindOne(context.TODO(), filter, opts).Decode(&result)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Printf("found document %v", result)
-	return nil
+	return result, nil
 }
