@@ -1,27 +1,26 @@
-import xk6_couchbase from 'k6/x/couchbase';
+import xk6_mongo from 'k6/x/mongo';
+
 
 /**
  * Index creation on partyTradeDate
  *
- * CREATE INDEX ix2 ON test (DISTINCT ARRAY (STR_TO_MILLIS(er.meta.partyTradeDate)) FOR er IN trade.party END) USING GSI;
+ * db.getCollection("testcollection").createIndex({'trade.party.meta.partyTradeDate':1});
  */
 
-const client = xk6_couchbase.newClient('localhost', '<username>', '<password>');
+const client = xk6_mongo.newClient('mongodb://172.17.0.2:27017');
 export default () => {
 
     var startDate = randomDate(new Date(2000, 0, 1), new Date(2022, 0, 1), 0, 24);
 
     var endDate = randomDate(startDate, new Date(2022, 0, 1), 0, 24);
 
+    var query = {"trade.party.meta.partyTradeDate": {$gte: startDate, $lte: endDate}};
 
-    var query = 'select *\n' +
-        'from test t\n' +
-        'where any v in t.trade.party satisfies STR_TO_MILLIS(v.meta.partyTradeDate) >= STR_TO_MILLIS("'+startDate.toISOString()+'")\n' +
-        '    and STR_TO_MILLIS(v.meta.partyTradeDate) <= STR_TO_MILLIS("'+endDate.toISOString()+'") END limit 10;'
+    console.log("query is :", query);
 
-    var res = client.find("test", "_default", query);
+    var res = client.find("testdb", "testcollection", query, 10);
 
-    //console.log(res);
+    console.log(res);
 }
 
 function randomDate(start, end, startHour, endHour) {
@@ -30,4 +29,5 @@ function randomDate(start, end, startHour, endHour) {
     date.setHours(hour);
     return date;
 }
+
 
