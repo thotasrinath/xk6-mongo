@@ -1,11 +1,11 @@
 import xk6_mongo from 'k6/x/mongo';
+import exec from 'k6/execution';
 
-var count = 0;
 const client = xk6_mongo.newClient('mongodb://172.17.0.2:27017');
 export default () => {
+    var docId= exec.scenario.iterationInTest;
+    client.insert("testdb", "testcollection", getRecord(docId.toString()));
 
-    client.insert("testdb", "testcollection", getRecord(count.toString()));
-    count++;
 }
 
 function randomDate(start, end, startHour, endHour) {
