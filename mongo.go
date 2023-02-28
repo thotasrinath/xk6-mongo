@@ -2,8 +2,9 @@ package xk6_mongo
 
 import (
 	"context"
-	"go.mongodb.org/mongo-driver/bson"
 	"log"
+
+	"go.mongodb.org/mongo-driver/bson"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -43,7 +44,21 @@ func (c *Client) Insert(database string, collection string, doc interface{}) err
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 
+	_, err := col.InsertOne(context.TODO(), doc)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c *Client) ConvertToEjsonAndInsert(database string, collection string, doc interface{}) error {
+	db := c.client.Database(database)
+	col := db.Collection(collection)
+
 	parsedDocBytes, err := bson.MarshalExtJSON(doc, false, false)
+	if err != nil {
+		return err
+	}
 	var parsedDoc interface{}
 	err = bson.UnmarshalExtJSON(parsedDocBytes, false, &parsedDoc)
 	if err != nil {
@@ -66,6 +81,28 @@ func (c *Client) InsertBatch(database string, collection string, docs []any) err
 	}
 	return nil
 
+}
+
+func (c *Client) Upsert(database string, collection string, docId string, doc map[string]interface{}) error {
+	db := c.client.Database(database)
+	col := db.Collection(collection)
+
+	filter := bson.D{{Key: "_id", Value: docId}}
+
+	var upsertDoc bson.D
+	for k, v := range doc {
+		upsertDoc = append(upsertDoc, bson.E{Key: k, Value: v})
+
+	}
+
+	update := bson.D{{Key: "$set", Value: upsertDoc}}
+	opts := options.Update().SetUpsert(true)
+	_, err := col.UpdateOne(context.TODO(), filter, update, opts)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *Client) Find(database string, collection string, filter interface{}, limit int64) ([]bson.M, error) {
@@ -91,7 +128,7 @@ func (c *Client) FindOne(database string, collection string, filter map[string]s
 	db := c.client.Database(database)
 	col := db.Collection(collection)
 	var result bson.M
-	opts := options.FindOne().SetSort(bson.D{{"_id", 1}})
+	opts := options.FindOne().SetSort(bson.D{{Key: "_id", Value: 1}})
 	err := col.FindOne(context.TODO(), filter, opts).Decode(&result)
 	if err != nil {
 		log.Fatal(err)
