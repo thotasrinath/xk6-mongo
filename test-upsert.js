@@ -2,7 +2,6 @@ import xk6_mongo from 'k6/x/mongo';
 import { SharedArray } from 'k6/data';
 import exec from 'k6/execution';
 
-
 const client = xk6_mongo.newClient('mongodb://172.17.0.2:27017');
 
 const data = new SharedArray('words', function () {
@@ -28,5 +27,5 @@ export default () => {
     obj['text_sent_150'] = sentenceGenerator(data, 150);
     obj['text_sent_300'] = sentenceGenerator(data, 300);
     obj['text_sent_450'] = sentenceGenerator(data, 450);
-    client.upsert("testdb", "testcollection", docId.toString(), doc)
+    client.upsert("testdb", "testcollection", docId.toString(), obj)
 }

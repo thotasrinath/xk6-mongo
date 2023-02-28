@@ -119,7 +119,7 @@ func (c *Client) Find(database string, collection string, filter interface{}, li
 	}
 
 	if err = cur.All(context.TODO(), &results); err != nil {
-		panic(err)
+		return results, err
 	}
 	return results, err
 }
